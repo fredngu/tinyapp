@@ -15,6 +15,7 @@ const urlDatabase = {
 
 app.use(express.urlencoded({ extended: true }));
 
+// Homepage ('/')
 app.get("/", (req, res) => {
   res.send("Hello!");
 });
@@ -27,31 +28,34 @@ app.get("/urls.json", (req, res) => {
   res.json(urlDatabase);
 });
 
+// URL Main Page
 app.get("/urls", (req, res) => {
   const templateVars = { urls: urlDatabase };
   res.render("urls_index", templateVars);
 });
 
+// URL Shortening Page
 app.get("/urls/new", (req, res) => {
   res.render("urls_new");
 });
 
+// URL Page for the Short URLS
 app.get("/urls/:id", (req, res) => {
   const templateVars = { id: req.params.id, longURL: urlDatabase[req.params.id]};
   res.render("urls_show", templateVars);
 });
 
+// Makes a new short url for submitted long url and redirects to urls/:id
 app.post("/urls", (req, res) => {
   console.log(req.body); // Log the POST request body to the console
   let randomString = generateRandomString();
   urlDatabase[randomString] = req.body.longURL;
-  // res.send(`short url = /urls/${randomString}`);
   res.redirect(`/urls/${randomString}`);
 });
 
+// Send to the long url using the short url via /u/:id
 app.get("/u/:id", (req, res) => {
   const longURL = urlDatabase[req.params.id];
-  console.log(longURL);
   res.redirect(longURL);
 });
 
