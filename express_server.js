@@ -6,6 +6,8 @@ function generateRandomString() {
   return Math.random().toString(20).substring(2, 8);
 };
 
+// Enable usage of ejs (embedded javascript) -> render
+// EJS removes one object item - so we use TemplateVars to bring it back
 app.set("view engine", "ejs");
 
 const urlDatabase = {
@@ -51,6 +53,12 @@ app.post("/urls", (req, res) => {
   let randomString = generateRandomString();
   urlDatabase[randomString] = req.body.longURL;
   res.redirect(`/urls/${randomString}`);
+});
+
+app.post("/urls/:id/delete", (req, res) => {
+  const userInput = req.params.id;
+  delete urlDatabase[userInput];
+  res.redirect('/urls');
 });
 
 // Send to the long url using the short url via /u/:id
