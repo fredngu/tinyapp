@@ -50,9 +50,20 @@ app.get("/urls/:id", (req, res) => {
 // Makes a new short url for submitted long url and redirects to urls/:id
 app.post("/urls", (req, res) => {
   console.log(req.body); // Log the POST request body to the console
-  let randomString = generateRandomString();
-  urlDatabase[randomString] = req.body.longURL;
-  res.redirect(`/urls/${randomString}`);
+  let newShortURL = generateRandomString();
+  urlDatabase[newShortURL] = req.body.longURL;
+  res.redirect(`/urls/${newShortURL}`);
+});
+
+app.post("/urls/:id", (req, res) => {
+  const userInput = req.params.id;
+  res.redirect(`/urls/${userInput}`);
+});
+
+app.post("/urls/:id/edit", (req, res) => {
+  const userInput = req.params.id;
+  urlDatabase[userInput] = req.body.longURL;
+  res.redirect(`/urls`);
 });
 
 app.post("/urls/:id/delete", (req, res) => {
