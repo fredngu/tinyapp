@@ -47,6 +47,12 @@ app.get("/urls/:id", (req, res) => {
   res.render("urls_show", templateVars);
 });
 
+app.post("/login", (req, res) => {
+  console.log(req.body.username)
+  res.cookie('username', req.body.username);
+  res.redirect('/urls');
+})
+
 // Makes a new short url for submitted long url and redirects to urls/:id
 app.post("/urls", (req, res) => {
   console.log(req.body); // Log the POST request body to the console
