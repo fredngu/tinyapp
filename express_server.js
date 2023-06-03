@@ -1,5 +1,6 @@
 const cookieParser = require("cookie-parser");
 const express = require("express");
+const bcrypt = require("bcryptjs");
 const app = express();
 const PORT = 8080; // default port 8080
 
@@ -20,7 +21,7 @@ const urlsForUser = function(id) {
   let urls = {};
   for (const keys of Object.keys(urlDatabase)) {
     if (urlDatabase[keys]["userID"] === id) {
-      urls[keys] = urlDatabase[keys]["longURL"]; 
+      urls[keys] = urlDatabase[keys]; 
     }
   }
   return urls;
@@ -47,21 +48,21 @@ const urlDatabase = {
 };
 
 const users = {
-  userRandomID: {
-    id: "userRandomID",
-    email: "user@example.com",
-    password: "purple-monkey-dinosaur",
-  },
-  user2RandomID: {
-    id: "user2RandomID",
-    email: "user2@example.com",
-    password: "dishwasher-funk",
-  },
-  aJ48lW: {
-    id: "aJ48lW",
-    email: "user3@fastemail.com",
-    password: "abc123"
-  }
+  // userRandomID: {
+  //   id: "userRandomID",
+  //   email: "user@example.com",
+  //   password: "purple-monkey-dinosaur",
+  // },
+  // user2RandomID: {
+  //   id: "user2RandomID",
+  //   email: "user2@example.com",
+  //   password: "dishwasher-funk",
+  // },
+  // aJ48lW: {
+  //   id: "aJ48lW",
+  //   email: "user3@fastemail.com",
+  //   password: "abc123"
+  // }
 };
 
 app.use(express.urlencoded({ extended: true }));
@@ -86,7 +87,7 @@ app.get("/urls", (req, res) => {
   if (!user_id) {
     res.status(403).end(`<html><body>Status 403: Login to view urls</body></html>\n`);
   } else {
-    let userURLS = urlsForUser(user_id, urlDatabase);
+    let userURLS = urlsForUser(user_id);
     const templateVars = { user: users, urls: userURLS, user_id };
     res.render("urls_index", templateVars);
   }
@@ -128,7 +129,6 @@ app.get("/urls/:id", (req, res) => {
   let user_id = req.cookies["user_id"];
   let userInput = req.params.id;
   let user_URLS = urlsForUser(user_id);
-
   if (!user_id) {
     res.status(403).end(`<html><body>Status 403: User must be logged in to see URL</body></html>\n`)
   } else if (!urlDatabase[userInput]) {
@@ -152,15 +152,17 @@ app.post("/register", (req, res) => {
       res.status(400).end(`<html><body>Status 400: Username already exists</body></html>\n`)
     } else if (email === "" || password === "") {
       res.status(400).end(`<html><body>Status 400: Username/Password is blank</body></html>\n`)
+    } else {
+      const hashedPassword = bcrypt.hashSync(password, 10);
+      let newRandomUserID = generateRandomString();
+      users[newRandomUserID] = {
+        id: newRandomUserID,
+        email,
+        password: hashedPassword
+        };
+      res.cookie('user_id', newRandomUserID);
+      res.redirect('/urls');
     }
-    let newRandomUserID = generateRandomString();
-    users[newRandomUserID] = {
-      id: newRandomUserID,
-      email,
-      password
-    };
-    res.cookie('user_id', newRandomUserID);
-    res.redirect('/urls');
   }
 });
 
@@ -175,7 +177,7 @@ app.post("/login", (req, res) => {
   } else if (loginUser === null) {
     res.status(403).end(`<html><body>Status 403: Username not found</body></html>\n`)
   } else {
-    if (loginUser.password === loginPassword) {
+    if (!bcrypt.compareSync(loginPassword, loginUser["password"])) {
       res.cookie('user_id', loginUser.id);
       res.redirect('/urls');
     } else {
@@ -197,15 +199,15 @@ app.post("/urls", (req, res) => {
   } else {
     console.log(req.body); // Log the POST request body to the console
     let newShortURL = generateRandomString();
-    urlDatabase[newShortURL] = { longURL: req.body.longURL, id: userID = user_id };
+    urlDatabase[newShortURL] = { longURL: req.body.longURL, userID: user_id };
     res.redirect(`/urls/${newShortURL}`);
   }
 });
 
 app.post("/urls/:id", (req, res) => {
-  let userInput = req.params.id;
-  let user_id = req.cookies["user_id"];
-  let user_URLS = urlsForUser(user_id);
+  let userInput = req.params.id;        //shortURL
+  let user_id = req.cookies["user_id"]; //Cookie for user_id
+  let user_URLS = urlsForUser(user_id); //URLs belonging to the user_id
 
   if (!urlDatabase[userInput]) {
     res.status(404).end(`Status 404: URL does not exist`)
@@ -247,6 +249,6 @@ app.get("/u/:id", (req, res) => {
   res.redirect(longURL);
 });
 
-app.get("/hello", (req, res) => {
-  res.send("<html><body>Hello <b>World</b></body></html>\n");
-});
+// app.get("/hello", (req, res) => {
+//   res.send("<html><body>Hello <b>World</b></body></html>\n");
+// });
