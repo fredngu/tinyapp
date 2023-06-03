@@ -27,7 +27,7 @@ app.use(cookieSession({
 
 // Homepage ('/')
 app.get("/", (req, res) => {
-  res.send("Hello!");
+  res.redirect('/login')
 });
 
 app.listen(PORT, () => {
@@ -41,7 +41,7 @@ app.get("/urls.json", (req, res) => {
 // URL Main Page
 app.get("/urls", (req, res) => {
   let user_id = req.session.user_id;
-  if (!user_id) {
+  if (!users[user_id]) {
     res.status(403).end(`<html><body>Status 403: Login to view urls</body></html>\n`);
   } else {
     let userURLS = urlsForUser(user_id, urlDatabase);
@@ -53,17 +53,17 @@ app.get("/urls", (req, res) => {
 // URL Shortening Page
 app.get("/urls/new", (req, res) => {
   let user_id = req.session.user_id;
-  if (!user_id) {
+  const templateVars = { user: users, user_id };
+  if (!templateVars.user[user_id]) {
     res.redirect('/login');
   } else {
-    const templateVars = { user: users, user_id };
     res.render("urls_new", templateVars);
   }
 });
 
 app.get("/register", (req, res) => {
   let user_id = req.session.user_id;
-  if (user_id) {
+  if (users[user_id]) {
     res.redirect('/urls');
   } else {
     const templateVars = { user: users, user_id };
@@ -73,7 +73,7 @@ app.get("/register", (req, res) => {
 
 app.get("/login", (req, res) => {
   let user_id = req.session.user_id;
-  if (user_id) {
+  if (users[user_id]) {
     res.redirect('/urls');
   } else {
     const templateVars = { user: users, user_id };
@@ -206,6 +206,3 @@ app.get("/u/:id", (req, res) => {
   res.redirect(longURL);
 });
 
-// app.get("/hello", (req, res) => {
-//   res.send("<html><body>Hello <b>World</b></body></html>\n");
-// });

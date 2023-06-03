@@ -1,7 +1,6 @@
 const { assert } = require('chai');
 
 const { getUserByEmail } = require('../helpers.js');
-const assertEqual = require('@fredngu/lotide/assertEqual.js');
 
 const testUsers = {
   "userRandomID": {
