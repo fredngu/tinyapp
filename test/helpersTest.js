@@ -1,6 +1,6 @@
 const { assert } = require('chai');
 
-const { getUserByEmail } = require('../helpers.js');
+const { getUserByEmail, urlsForUser } = require('../helpers.js');
 
 const testUsers = {
   "userRandomID": {
@@ -24,6 +24,10 @@ const testUrlDatabase = {
     longURL: "https://www.google.ca",
     userID: "aJ48lW",
   },
+  asl1o2: {
+    longURL: "https://www.youtube.com",
+    userID: "1k20aj"
+  }
 };
 
 describe('getUserByEmail', function() {
@@ -36,5 +40,21 @@ describe('getUserByEmail', function() {
     const user = getUserByEmail("fake@example.com", testUsers)
     const expectedOutcome = undefined
     assert.equal(user, expectedOutcome)
+  })
+});
+
+describe('urlsForUser', function() {
+  it('should return an object of URLs', function() {
+    const urls = urlsForUser("aJ48lW", testUrlDatabase)
+    const expectedUserURLS = {
+      b6UTxQ: { longURL: 'https://www.tsn.ca', userID: 'aJ48lW' },
+      i3BoGr: { longURL: 'https://www.google.ca', userID: 'aJ48lW' }
+    }
+    assert.deepEqual(urls, expectedUserURLS)
+  });
+  it('should return empty object when ID not in url database', function() {
+    const urls = urlsForUser("lq141a", testUrlDatabase)
+    const expectedOutcome = {}
+    assert.deepEqual(urls, expectedOutcome)
   })
 });
