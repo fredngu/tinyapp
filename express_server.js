@@ -1,72 +1,29 @@
-const cookieParser = require("cookie-parser");
 const express = require("express");
+const {getUserByEmail, generateRandomString, urlsForUser} = require('./helpers');
+const cookieSession = require("cookie-session");
+// const methodOverride = require('method-override')
 const bcrypt = require("bcryptjs");
 const app = express();
 const PORT = 8080; // default port 8080
 
-const generateRandomString = function() {
-  return Math.random().toString(20).substring(2, 8);
+const urlDatabase = {
 };
 
-const getUserByEmail = function(email, userObj) {
-  for (const keys of Object.keys(userObj)) {
-    if (userObj[keys].email === email) {
-      return userObj[keys];
-    }
-  }
-  return null;
+const users = {
 };
-
-const urlsForUser = function(id) {
-  let urls = {};
-  for (const keys of Object.keys(urlDatabase)) {
-    if (urlDatabase[keys]["userID"] === id) {
-      urls[keys] = urlDatabase[keys]; 
-    }
-  }
-  return urls;
-} 
 
 // Enable usage of ejs (embedded javascript) -> render
 // EJS removes one object item - so we use TemplateVars to bring it back
 app.set("view engine", "ejs");
 
-// const urlDatabase = {
-//   "b2xVn2": "http://www.lighthouselabs.ca",
-//   "9sm5xK": "http://www.google.com"
-// };
-
-const urlDatabase = {
-  b6UTxQ: {
-    longURL: "https://www.tsn.ca",
-    userID: "aJ48lW",
-  },
-  i3BoGr: {
-    longURL: "https://www.google.ca",
-    userID: "aJ48lW",
-  },
-};
-
-const users = {
-  // userRandomID: {
-  //   id: "userRandomID",
-  //   email: "user@example.com",
-  //   password: "purple-monkey-dinosaur",
-  // },
-  // user2RandomID: {
-  //   id: "user2RandomID",
-  //   email: "user2@example.com",
-  //   password: "dishwasher-funk",
-  // },
-  // aJ48lW: {
-  //   id: "aJ48lW",
-  //   email: "user3@fastemail.com",
-  //   password: "abc123"
-  // }
-};
-
 app.use(express.urlencoded({ extended: true }));
-app.use(cookieParser());
+
+app.use(cookieSession({
+  name: 'session',
+  keys: ['key1', 'key2'],
+}));
+
+// app.use(methodOverride('_method'));
 
 // Homepage ('/')
 app.get("/", (req, res) => {
@@ -83,11 +40,11 @@ app.get("/urls.json", (req, res) => {
 
 // URL Main Page
 app.get("/urls", (req, res) => {
-  let user_id = req.cookies["user_id"];
+  let user_id = req.session.user_id;
   if (!user_id) {
     res.status(403).end(`<html><body>Status 403: Login to view urls</body></html>\n`);
   } else {
-    let userURLS = urlsForUser(user_id);
+    let userURLS = urlsForUser(user_id, urlDatabase);
     const templateVars = { user: users, urls: userURLS, user_id };
     res.render("urls_index", templateVars);
   }
@@ -95,7 +52,7 @@ app.get("/urls", (req, res) => {
 
 // URL Shortening Page
 app.get("/urls/new", (req, res) => {
-  let user_id = req.cookies["user_id"];
+  let user_id = req.session.user_id;
   if (!user_id) {
     res.redirect('/login');
   } else {
@@ -105,7 +62,7 @@ app.get("/urls/new", (req, res) => {
 });
 
 app.get("/register", (req, res) => {
-  let user_id = req.cookies["user_id"];
+  let user_id = req.session.user_id;
   if (user_id) {
     res.redirect('/urls');
   } else {
@@ -115,7 +72,7 @@ app.get("/register", (req, res) => {
 });
 
 app.get("/login", (req, res) => {
-  let user_id = req.cookies["user_id"];
+  let user_id = req.session.user_id;
   if (user_id) {
     res.redirect('/urls');
   } else {
@@ -126,9 +83,9 @@ app.get("/login", (req, res) => {
 
 // URL Page for the Short URLS
 app.get("/urls/:id", (req, res) => {
-  let user_id = req.cookies["user_id"];
+  let user_id = req.session.user_id;
   let userInput = req.params.id;
-  let user_URLS = urlsForUser(user_id);
+  let user_URLS = urlsForUser(user_id, urlDatabase);
   if (!user_id) {
     res.status(403).end(`<html><body>Status 403: User must be logged in to see URL</body></html>\n`)
   } else if (!urlDatabase[userInput]) {
@@ -148,7 +105,7 @@ app.post("/register", (req, res) => {
   if (!email) {
     res.redirect('/register');
   } else {
-    if (getUserByEmail(email, users) !== null) {
+    if (getUserByEmail(email, users)) {
       res.status(400).end(`<html><body>Status 400: Username already exists</body></html>\n`)
     } else if (email === "" || password === "") {
       res.status(400).end(`<html><body>Status 400: Username/Password is blank</body></html>\n`)
@@ -160,7 +117,7 @@ app.post("/register", (req, res) => {
         email,
         password: hashedPassword
         };
-      res.cookie('user_id', newRandomUserID);
+      req.session.user_id = newRandomUserID;
       res.redirect('/urls');
     }
   }
@@ -174,11 +131,11 @@ app.post("/login", (req, res) => {
 
   if (!loginEmail) {
     res.redirect('/login');
-  } else if (loginUser === null) {
+  } else if (loginUser === undefined) {
     res.status(403).end(`<html><body>Status 403: Username not found</body></html>\n`)
   } else {
     if (!bcrypt.compareSync(loginPassword, loginUser["password"])) {
-      res.cookie('user_id', loginUser.id);
+      req.session.user_id = loginUser;
       res.redirect('/urls');
     } else {
       res.status(403).end(`<html><body>Status 403: Password incorrect</body></html>\n`)
@@ -187,13 +144,13 @@ app.post("/login", (req, res) => {
 });
 
 app.post("/logout", (req, res) => {
-  res.clearCookie('user_id');
+  req.session = null;
   res.redirect('/login');
 });
 
 // Makes a new short url for submitted long url and redirects to urls/:id
 app.post("/urls", (req, res) => {
-  let user_id = req.cookies['user_id']
+  let user_id = req.session.user_id;
   if (!user_id) {
     res.status(403).end(`<html><body>Status 403: Must login to shorten URLs</body></html>\n`)
   } else {
@@ -206,8 +163,8 @@ app.post("/urls", (req, res) => {
 
 app.post("/urls/:id", (req, res) => {
   let userInput = req.params.id;        //shortURL
-  let user_id = req.cookies["user_id"]; //Cookie for user_id
-  let user_URLS = urlsForUser(user_id); //URLs belonging to the user_id
+  let user_id = req.session.user_id; //Cookie for user_id
+  let user_URLS = urlsForUser(user_id, urlDatabase); //URLs belonging to the user_id
 
   if (!urlDatabase[userInput]) {
     res.status(404).end(`Status 404: URL does not exist`)
@@ -228,8 +185,8 @@ app.post("/urls/:id/edit", (req, res) => {
 
 app.post("/urls/:id/delete", (req, res) => {
   let userInput = req.params.id;
-  let user_id = req.cookies["user_id"];
-  let user_URLS = urlsForUser(user_id);
+  let user_id = req.session.user_id;
+  let user_URLS = urlsForUser(user_id, urlDatabase);
 
   if (!urlDatabase[userInput]) {
     res.status(404).end(`Status 404: URL does not exist`)
