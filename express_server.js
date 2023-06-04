@@ -183,29 +183,23 @@ app.post("/login", (req, res) => {
 app.post("/register", (req, res) => {
   const email = req.body.email;
   const password = req.body.password;
-
-  if (!email) {
-    //If no email is written, refresh page
-    res.redirect('/register');
+  //Error catching
+  if (getUserByEmail(email, users)) {
+    res.status(400).end(`<html><body>Status 400: Username already exists</body></html>\n`);
+  } else if (!email || !password) {
+    res.status(400).end(`<html><body>Status 400: Username/Password is blank</body></html>\n`);
   } else {
-    //Error catching
-    if (getUserByEmail(email, users)) {
-      res.status(400).end(`<html><body>Status 400: Username already exists</body></html>\n`);
-    } else if (!email || !password) {
-      res.status(400).end(`<html><body>Status 400: Username/Password is blank</body></html>\n`);
-    } else {
-      //Create new user account
-      const hashedPassword = bcrypt.hashSync(password, 10);
-      const newRandomUserID = generateRandomString();
-      users[newRandomUserID] = {
-        id: newRandomUserID,
-        email,
-        password: hashedPassword
-      };
-      req.session.userID = newRandomUserID;
-      res.redirect('/urls');
-    }
-  }
+    //Create new user account
+    const hashedPassword = bcrypt.hashSync(password, 10);
+    const newRandomUserID = generateRandomString();
+    users[newRandomUserID] = {
+      id: newRandomUserID,
+      email,
+      password: hashedPassword
+    };
+    req.session.userID = newRandomUserID;
+    res.redirect('/urls');
+  }  
 });
 
 // Log out
